@@ -1,0 +1,50 @@
+"use client";
+
+import { useState } from "react";
+
+export default function UploadDemo() {
+  const [file, setFile] = useState<File | null>(null);
+  const [status, setStatus] = useState("");
+
+  async function upload() {
+    if (!file) return;
+
+    setStatus("업로드 중...");
+    const form = new FormData();
+    form.append("video", file);
+
+    const res = await fetch("/api/subtitle", {
+      method: "POST",
+      body: form
+    });
+
+    const data = await res.json();
+    setStatus("자막 생성 완료");
+
+    console.log(data); // 자막 URL들
+  }
+
+  return (
+    <div className="max-w-xl mx-auto p-6">
+      <h1 className="text-2xl font-bold mb-4">
+        설명 영상 업로드 (자막 데모)
+      </h1>
+
+      <input
+        type="file"
+        accept="video/*"
+        onChange={(e) => setFile(e.target.files?.[0] || null)}
+        className="mb-4"
+      />
+
+      <button
+        onClick={upload}
+        className="bg-white text-black px-4 py-2 rounded"
+      >
+        업로드 & 자막 생성
+      </button>
+
+      <p className="mt-4 text-neutral-300">{status}</p>
+    </div>
+  );
+}
