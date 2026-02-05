@@ -1,0 +1,662 @@
+
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>9급 AI Pass - 영재님을 위한 전략 튜터</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700&display=swap');
+        body { font-family: 'Pretendard', sans-serif; }
+        .message-appear { animation: slideUp 0.3s ease-out forwards; }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .prose b, .prose strong { font-weight: 700; color: #4f46e5; background-color: #f5f3ff; padding: 0 4px; border-radius: 4px; }
+        .prose ul { list-style-type: none; padding-left: 0; margin-bottom: 1rem; }
+        .prose li { position: relative; padding-left: 1.5rem; margin-bottom: 0.5rem; }
+        .prose li::before { content: "•"; position: absolute; left: 0; color: #6366f1; font-weight: bold; }
+        .prose h3 { font-weight: 700; font-size: 1.1rem; margin-top: 1.5rem; margin-bottom: 0.75rem; color: #1e293b; border-left: 4px solid #6366f1; padding-left: 10px; }
+        
+        .tab-active { color: #4f46e5; border-bottom: 2px solid #4f46e5; }
+        .hidden-tab { display: none; }
+
+        /* Mobile optimization */
+        @media (max-width:768px){
+            body{font-size:14px;}
+            table th,table td{padding:8px !important;}
+            header{padding:0 10px !important;}
+            .grid{grid-template-columns:1fr !important;}
+            /* Hide left sidebar nav on small screens to maximize space */
+            aside{display:none !important;}
+            main{width:100% !important;}
+        }
+    </style>
+</head>
+<body class="bg-[#F8FAFC] text-slate-900">
+
+    <div id="app" class="flex h-screen overflow-hidden">
+        <!-- Sidebar -->
+        <aside class="hidden lg:flex w-72 bg-white border-r border-slate-200 flex-col">
+            <div class="p-6">
+                <div class="flex items-center gap-3 mb-8">
+                    <div class="bg-indigo-600 p-2 rounded-xl shadow-lg shadow-indigo-100">
+                        <i data-lucide="award" class="text-white w-5 h-5"></i>
+                    </div>
+                    <h1 class="text-xl font-bold tracking-tight">9급 AI Pass</h1>
+                </div>
+                <div class="bg-gradient-to-br from-indigo-600 to-violet-700 p-5 rounded-2xl text-white shadow-lg">
+                    <div class="flex items-center gap-3 mb-3">
+                        <div class="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center font-bold">YJ</div>
+                        <div>
+                            <p class="text-sm font-bold">전영재님</p>
+                            <p class="text-[10px] opacity-80 font-medium">전산/데이터직 합격 튜터링</p>
+                        </div>
+                    </div>
+                    <div class="h-1.5 w-full bg-white/20 rounded-full overflow-hidden">
+                        <div id="progress-bar" class="h-full bg-white w-[0%] transition-all duration-500"></div>
+                    </div>
+                    <p class="text-[10px] mt-2 text-right opacity-90 font-bold" id="goal-status">오늘의 학습을 시작하세요</p>
+                </div>
+            </div>
+
+            <nav class="flex-1 px-4 space-y-1 overflow-y-auto" id="keyword-nav">
+                <p class="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">출제 예상 핵심 개념</p>
+            </nav>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="flex-1 flex flex-col relative">
+            <header class="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 sticky top-0 z-20">
+                <div class="flex gap-8">
+                    <button onclick="switchTab('chat')" id="tab-chat" class="h-16 font-bold text-sm flex items-center gap-2 tab-active">
+                        <i data-lucide="message-square" class="w-4 h-4"></i> 전략 튜터링
+                    </button>
+                    <button onclick="switchTab('report')" id="tab-report" class="h-16 font-bold text-sm flex items-center gap-2 text-slate-400 hover:text-slate-600">
+                        <i data-lucide="bar-chart-3" class="w-4 h-4"></i> 학습 통계 리포트
+                    </button>
+                </div>
+                <div class="flex items-center gap-4">
+                    <button onclick="clearChat()" class="text-slate-400 hover:text-red-500 transition-colors">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Chat Content -->
+            <section id="content-chat" class="flex-1 flex flex-col overflow-hidden">
+                <div id="chat-container" class="flex-1 overflow-y-auto p-4 md:p-10 scroll-smooth">
+                    <div class="max-w-3xl mx-auto space-y-8 pb-20" id="message-list"></div>
+                </div>
+
+                <div class="p-4 md:p-8 bg-gradient-to-t from-white via-white to-transparent">
+                    <div class="max-w-3xl mx-auto">
+                        <div id="file-preview" class="hidden mb-2 p-2 bg-indigo-50 rounded-xl border border-indigo-100 flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <i data-lucide="file-text" class="w-4 h-4 text-indigo-500"></i>
+                                <span id="file-name" class="text-xs font-medium text-indigo-700 truncate max-w-[200px]">파일명.jpg</span>
+                            </div>
+                            <button onclick="removeFile()" class="p-1 hover:bg-indigo-100 rounded-lg text-indigo-400">
+                                <i data-lucide="x" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                        
+                        <form id="chat-form" class="relative group">
+                            <div class="absolute -inset-1 bg-gradient-to-r from-indigo-500 to-violet-500 rounded-[2rem] blur opacity-10 group-focus-within:opacity-20 transition-opacity"></div>
+                            <div class="relative flex items-center bg-white border border-slate-200 rounded-[1.5rem] shadow-xl p-2 transition-all focus-within:border-indigo-400">
+                                <input type="file" id="file-input" class="hidden" accept="image/*, .pdf, .txt, .docx">
+                                <button type="button" onclick="document.getElementById('file-input').click()" class="p-3 text-slate-400 hover:text-indigo-600 transition-colors">
+                                    <i data-lucide="paperclip" class="w-5 h-5"></i>
+                                </button>
+                                <input type="text" id="user-input" placeholder="질문하거나 사진/파일을 업로드하세요" class="flex-1 bg-transparent border-none focus:outline-none px-2 py-3 text-sm font-medium">
+                                <button type="submit" id="submit-btn" class="p-3 rounded-2xl bg-indigo-600 text-white hover:bg-indigo-700 disabled:bg-slate-200 transition-all shadow-lg shadow-indigo-200">
+                                    <i data-lucide="sparkles" class="w-5 h-5" id="btn-icon"></i>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Report Content -->
+            <section id="content-report" class="flex-1 overflow-y-auto p-6 md:p-10 hidden-tab bg-[#F8FAFC]">
+                <div class="max-w-4xl mx-auto space-y-8">
+                    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-wrap gap-3 items-center">
+                        <input type="date" id="pickDate" class="border border-slate-200 px-3 py-2 rounded-xl text-sm" />
+                        <button onclick="loadDate()" class="px-3 py-2 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700">불러오기</button>
+
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs font-bold text-slate-500">오늘 목표</span>
+                            <input id="goalInput" type="number" min="1" class="border border-slate-200 px-3 py-2 rounded-xl text-sm w-24" placeholder="10" />
+                            <button onclick="setGoal()" class="px-3 py-2 bg-emerald-500 text-white rounded-xl text-sm font-bold hover:bg-emerald-600">목표설정</button>
+                        </div>
+
+                        <span id="streakBox" class="font-bold text-orange-500">🔥 0일 연속</span>
+
+                        <button onclick="downloadCSV()" class="px-3 py-2 bg-slate-700 text-white rounded-xl text-sm font-bold hover:bg-slate-800">CSV</button>
+                    </div>
+
+                    <!-- Top Stats -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                            <p class="text-slate-400 text-xs font-bold uppercase mb-1">총 학습 키워드</p>
+                            <h2 class="text-3xl font-bold text-indigo-600" id="stat-total-queries">0</h2>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                            <p class="text-slate-400 text-xs font-bold uppercase mb-1">오늘의 학습 달성도</p>
+                            <h2 class="text-3xl font-bold text-emerald-500" id="stat-progress">0%</h2>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                            <p class="text-slate-400 text-xs font-bold uppercase mb-1">최다 집중 과목</p>
+                            <h2 class="text-xl font-bold text-slate-700" id="stat-top-category">-</h2>
+                        </div>
+                    </div>
+
+                    <!-- Subject Detailed Table -->
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                        <div class="p-6 border-b border-slate-50 flex justify-between items-center">
+                            <h3 class="font-bold text-slate-800 flex items-center gap-2">
+                                <i data-lucide="list-checks" class="w-5 h-5 text-indigo-500"></i> 과목별 학습 현황
+                            </h3>
+                            <span class="text-[10px] text-slate-400">조회/요청수 기준</span>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="bg-slate-50">
+                                        <th class="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">과목명</th>
+                                        <th class="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider text-center">요청수</th>
+                                        <th class="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">비중</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="subject-table-body" class="divide-y divide-slate-50">
+                                    <!-- Rows added by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <!-- Chart Visualization -->
+                        <div class="bg-white p-8 rounded-2xl shadow-sm border border-slate-100">
+                            <h3 class="font-bold text-slate-800 mb-6 flex items-center gap-2">
+                                <i data-lucide="pie-chart" class="w-5 h-5 text-indigo-500"></i> 시각화 리포트
+                            </h3>
+                            <div id="category-chart" class="space-y-4">
+                                <p class="text-center text-slate-400 py-10 italic">데이터 대기 중...</p>
+                            </div>
+                        </div>
+                        <!-- Recent History -->
+                        <div class="bg-white p-8 rounded-2xl shadow-sm border border-slate-100">
+                            <h3 class="font-bold text-slate-800 mb-6 flex items-center gap-2">
+                                <i data-lucide="history" class="w-5 h-5 text-indigo-500"></i> 최근 학습 기록
+                            </h3>
+                            <div id="recent-keywords" class="flex flex-wrap gap-2">
+                                <p class="text-center text-slate-400 py-10 italic">기록 없음</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Monthly & Subject Summary -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div class="bg-white p-8 rounded-2xl shadow-sm border border-slate-100">
+                            <h3 class="font-bold text-slate-800 mb-6 flex items-center gap-2">
+                                <i data-lucide="calendar" class="w-5 h-5 text-indigo-500"></i> 월별 학습량
+                            </h3>
+                            <div id="monthlyChart" class="space-y-3">
+                                <p class="text-center text-slate-400 py-10 italic">데이터 대기 중...</p>
+                            </div>
+                        </div>
+                        <div class="bg-white p-8 rounded-2xl shadow-sm border border-slate-100">
+                            <h3 class="font-bold text-slate-800 mb-6 flex items-center gap-2">
+                                <i data-lucide="trophy" class="w-5 h-5 text-indigo-500"></i> 과목별 누적 랭킹
+                            </h3>
+                            <div id="subjectRank" class="space-y-2">
+                                <p class="text-center text-slate-400 py-10 italic">데이터 대기 중...</p>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        const API_KEY = "AIzaSyAXX96qX5M2WDXz66RkB0keW4uyOPB_nn0"; // 런타임에서 자동 주입됨
+        const chatForm = document.getElementById('chat-form');
+        const userInput = document.getElementById('user-input');
+        const fileInput = document.getElementById('file-input');
+        const filePreview = document.getElementById('file-preview');
+        const fileNameDisp = document.getElementById('file-name');
+        const messageList = document.getElementById('message-list');
+        const chatContainer = document.getElementById('chat-container');
+        const submitBtn = document.getElementById('submit-btn');
+        const btnIcon = document.getElementById('btn-icon');
+        const keywordNav = document.getElementById('keyword-nav');
+
+        // Storage (date-based)
+        function getToday() { return new Date().toISOString().slice(0, 10); }
+
+        const STORAGE_KEY = "STUDY_DB";
+        let DB = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
+
+        function getDayData(date) {
+            if (!DB[date]) {
+                DB[date] = {
+                    goal: 10,
+                    queries: [],
+                    categories: {
+                        "데이터베이스": 0,
+                        "운영체제": 0,
+                        "네트워크": 0,
+                        "컴퓨터구조": 0,
+                        "소프트웨어공학": 0,
+                        "정보보안": 0,
+                        "기타": 0
+                    }
+                };
+            }
+            return DB[date];
+        }
+
+        function saveDB() {
+            DB[currentDate] = historyData;
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(DB));
+        }
+
+        let currentDate = getToday();
+        let historyData = getDayData(currentDate);
+
+        let selectedFileBase64 = null;
+        let selectedFileType = null;
+
+        const keyTopics = [
+            { name: "데드락(Deadlock) 4조건", desc: "운영체제", cat: "운영체제" },
+            { name: "정규화(1NF~BCNF)", desc: "데이터베이스", cat: "데이터베이스" },
+            { name: "TCP/UDP 차이점", desc: "네트워크", cat: "네트워크" },
+            { name: "캐시 메모리 사상방식", desc: "컴퓨터구조", cat: "컴퓨터구조" }
+        ];
+
+        function initSidebar() {
+            keyTopics.forEach(topic => {
+                const btn = document.createElement('button');
+                btn.className = "w-full flex flex-col items-start px-4 py-3 rounded-xl hover:bg-slate-50 transition-all text-left border border-transparent hover:border-slate-100";
+                btn.onclick = () => { 
+                    userInput.value = `${topic.name}에 대해 설명해줘`; 
+                    handleSend(new Event('submit')); 
+                };
+                btn.innerHTML = `
+                    <span class="text-sm font-bold text-slate-700">${topic.name}</span>
+                    <span class="text-[10px] text-slate-400">${topic.desc}</span>
+                `;
+                keywordNav.appendChild(btn);
+            });
+        }
+
+        fileInput.onchange = (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            fileNameDisp.innerText = file.name;
+            filePreview.classList.remove('hidden');
+            
+            const reader = new FileReader();
+            reader.onload = (re) => {
+                selectedFileBase64 = re.target.result.split(',')[1];
+                selectedFileType = file.type;
+            };
+            reader.readAsDataURL(file);
+        };
+
+        function removeFile() {
+            fileInput.value = '';
+            selectedFileBase64 = null;
+            selectedFileType = null;
+            filePreview.classList.add('hidden');
+        }
+
+        function switchTab(tab) {
+            document.getElementById('content-chat').classList.toggle('hidden-tab', tab !== 'chat');
+            document.getElementById('content-report').classList.toggle('hidden-tab', tab !== 'report');
+            document.getElementById('tab-chat').classList.toggle('tab-active', tab === 'chat');
+            document.getElementById('tab-report').classList.toggle('tab-active', tab === 'report');
+            if (tab === 'report') updateReportUI();
+            lucide.createIcons();
+        }
+
+        function categorize(text) {
+            if (text.match(/정규화|트랜잭션|DB|인덱스|SQL|데이터베이스|SQL/i)) return "데이터베이스";
+            if (text.match(/데드락|프로세스|스레드|메모리|가상|스케줄링|OS|운영체제/i)) return "운영체제";
+            if (text.match(/OSI|계층|IP|TCP|UDP|HTTP|네트워크|라우팅/i)) return "네트워크";
+            if (text.match(/CPU|캐시|구조|명령어|파이프라인|병렬|논리회로/i)) return "컴퓨터구조";
+            if (text.match(/설계|방법론|폭포수|애자일|테스팅|모델링/i)) return "소프트웨어공학";
+            if (text.match(/암호|해킹|인증|공격|보안|방화벽/i)) return "정보보안";
+            return "기타";
+        }
+
+        function updateReportUI() {
+            const total = historyData.queries.length;
+            document.getElementById('stat-total-queries').innerText = total;
+
+            // Goal-based progress
+            const goal = Math.max(parseInt(historyData.goal || 10), 1);
+            const prog = Math.min(Math.round((total / goal) * 100), 100);
+            document.getElementById('stat-progress').innerText = prog + "%";
+            document.getElementById('progress-bar').style.width = prog + "%";
+            document.getElementById('goal-status').innerText = total >= goal ? "오늘의 목표 달성!" : `목표까지 ${goal - total}개 남음`;
+
+            // Top category (today)
+            let maxCat = "-";
+            let maxVal = -1;
+            for (let c in historyData.categories) {
+                if (historyData.categories[c] > maxVal && historyData.categories[c] > 0) {
+                    maxVal = historyData.categories[c];
+                    maxCat = c;
+                }
+            }
+            document.getElementById('stat-top-category').innerText = maxCat;
+
+            // Date/goal UI sync
+            const pickDateEl = document.getElementById("pickDate");
+            if (pickDateEl) pickDateEl.value = currentDate;
+            const goalInputEl = document.getElementById("goalInput");
+            if (goalInputEl) goalInputEl.value = goal;
+
+            // Update Detailed Table & Chart
+            const tableBody = document.getElementById('subject-table-body');
+            const chart = document.getElementById('category-chart');
+
+            if (total > 0) {
+                // Table Update
+                tableBody.innerHTML = Object.entries(historyData.categories)
+                    .sort((a, b) => b[1] - a[1])
+                    .map(([cat, count]) => {
+                        const percent = Math.round((count / total) * 100);
+                        return `
+                            <tr>
+                                <td class="px-6 py-4 text-sm font-semibold text-slate-700">${cat}</td>
+                                <td class="px-6 py-4 text-sm text-center font-mono text-indigo-600 font-bold">${count}회</td>
+                                <td class="px-6 py-4">
+                                    <div class="flex items-center gap-3">
+                                        <div class="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                                            <div class="h-full bg-indigo-500" style="width:${percent}%"></div>
+                                        </div>
+                                        <span class="text-[11px] font-bold text-slate-400 w-8">${percent}%</span>
+                                    </div>
+                                </td>
+                            </tr>
+                        `;
+                    }).join('');
+
+                // Chart/Visualization Update
+                chart.innerHTML = Object.entries(historyData.categories)
+                    .filter(e => e[1] > 0)
+                    .sort((a, b) => b[1] - a[1])
+                    .map(([cat, count]) => `
+                        <div>
+                            <div class="flex justify-between text-xs font-bold mb-1">
+                                <span>${cat}</span>
+                                <span class="text-indigo-600">${count}회</span>
+                            </div>
+                            <div class="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                                <div class="h-full bg-indigo-500 transition-all duration-700" style="width:${(count / total) * 100}%"></div>
+                            </div>
+                        </div>
+                    `).join('');
+
+                // Recent Keywords
+                document.getElementById('recent-keywords').innerHTML = historyData.queries
+                    .slice(-8)
+                    .reverse()
+                    .map(q => `<span class="px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-[11px] font-medium shadow-sm text-slate-600"># ${q}</span>`)
+                    .join('');
+            } else {
+                tableBody.innerHTML = `<tr><td colspan="3" class="px-6 py-10 text-center text-slate-400 italic text-sm">학습 기록이 없습니다.</td></tr>`;
+                chart.innerHTML = `<p class="text-center text-slate-400 py-10 italic">데이터 대기 중...</p>`;
+                document.getElementById('recent-keywords').innerHTML = `<p class="text-center text-slate-400 py-10 italic">기록 없음</p>`;
+            }
+
+            // Extras
+            calcStreak();
+            drawMonthly();
+            drawSubjectRank();
+
+            // Persist
+            saveDB();
+        }
+
+        async function handleSend(e) {
+            if(e) e.preventDefault();
+            const text = userInput.value.trim();
+            if (!text && !selectedFileBase64) return;
+
+            const queryText = text || "파일 분석 요청";
+            
+            // Stats Tracking
+            historyData.queries.push(queryText);
+            const category = categorize(queryText);
+            historyData.categories[category]++;
+            saveDB();
+
+            addMessage('user', queryText + (selectedFileBase64 ? " (파일 업로드됨)" : ""));
+            
+            const payload = {
+                contents: [{
+                    parts: [
+                        { text: queryText },
+                        ...(selectedFileBase64 ? [{ inlineData: { mimeType: selectedFileType, data: selectedFileBase64 } }] : [])
+                    ]
+                }],
+                systemInstruction: { parts: [{ text: "당신은 9급 전산직/데이터직 공무원 수험생 영재님의 개인 튜터입니다. 질문에 대해 [개념 정의], [기출 포인트], [핵심 암기 팁] 순서로 명확하게 답변하세요. 답변 시 볼드체와 리스트를 활용해 가독성을 높이세요." }] }
+            };
+
+            userInput.value = '';
+            removeFile();
+            setLoading(true);
+
+            try {
+                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${API_KEY}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                const aiResponse = data.candidates[0].content.parts[0].text;
+                addMessage('assistant', aiResponse);
+                
+                // Real-time update
+                updateReportUI();
+            } catch (err) {
+                addMessage('assistant', "영재님, 연결 상태를 확인해주세요. 답변을 가져오지 못했습니다.");
+                updateReportUI();
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        function addMessage(role, content) {
+            const isUser = role === 'user';
+            const div = document.createElement('div');
+            div.className = `flex gap-4 ${isUser ? 'flex-row-reverse' : ''} message-appear`;
+            
+            // Format Markdown-like bold and line breaks
+            const formattedContent = isUser ? content : content
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\n/g, '<br>');
+
+            div.innerHTML = `
+                <div class="shrink-0 w-9 h-9 rounded-xl flex items-center justify-center shadow-sm ${isUser ? 'bg-indigo-600 text-white' : 'bg-white border border-slate-200 text-indigo-600'}">
+                    <i data-lucide="${isUser ? 'user' : 'bot'}" class="w-5 h-5"></i>
+                </div>
+                <div class="max-w-[85%] p-4 rounded-2xl text-sm leading-relaxed prose ${isUser ? 'bg-indigo-600 text-white rounded-tr-none shadow-indigo-100' : 'bg-white border border-slate-200 text-slate-700 rounded-tl-none shadow-sm'}">
+                    ${formattedContent}
+                </div>
+            `;
+            messageList.appendChild(div);
+            lucide.createIcons();
+            chatContainer.scrollTo({ top: chatContainer.scrollHeight, behavior: 'smooth' });
+        }
+
+        function setLoading(l) {
+            submitBtn.disabled = l;
+            btnIcon.setAttribute('data-lucide', l ? 'loader-2' : 'sparkles');
+            if (l) btnIcon.classList.add('animate-spin'); else btnIcon.classList.remove('animate-spin');
+            lucide.createIcons();
+        }
+
+        function clearChat() { 
+            messageList.innerHTML = ''; 
+            // Clear ALL saved data (scheduler history)
+            DB = {};
+            localStorage.removeItem(STORAGE_KEY);
+
+            currentDate = getToday();
+            historyData = getDayData(currentDate);
+
+            updateReportUI(); 
+            addMessage('assistant', "영재님, 학습 기록을 초기화했습니다. 새로운 주제로 시작해볼까요?"); 
+        }
+
+        // ---- Scheduler-like functions (date-based report) ----
+        function loadDate() {
+            const d = document.getElementById("pickDate")?.value;
+            if (!d) return alert("날짜를 선택하세요.");
+            currentDate = d;
+            historyData = getDayData(currentDate);
+            updateReportUI();
+        }
+
+        function setGoal() {
+            const g = parseInt(document.getElementById("goalInput")?.value);
+            if (!g || g < 1) return;
+            historyData.goal = g;
+            updateReportUI();
+        }
+
+        function calcStreak() {
+            const dates = Object.keys(DB).sort(); // ascending
+            let streak = 0;
+            let last = null;
+
+            // walk backwards
+            for (let i = dates.length - 1; i >= 0; i--) {
+                const d = dates[i];
+                const hasStudy = (DB[d]?.queries?.length || 0) > 0;
+                if (!hasStudy) continue;
+
+                if (last === null) {
+                    streak = 1;
+                    last = d;
+                    continue;
+                }
+
+                const diff = new Date(last) - new Date(d);
+                if (diff === 86400000) { // 1 day
+                    streak++;
+                    last = d;
+                } else {
+                    break;
+                }
+            }
+
+            const el = document.getElementById("streakBox");
+            if (el) el.innerText = `🔥 ${streak}일 연속`;
+        }
+
+        function drawMonthly() {
+            const months = {};
+            for (let d in DB) {
+                const m = d.slice(0, 7);
+                months[m] = (months[m] || 0) + (DB[d]?.queries?.length || 0);
+            }
+            const entries = Object.entries(months).sort((a, b) => a[0].localeCompare(b[0])); // chronological
+            const box = document.getElementById("monthlyChart");
+            if (!box) return;
+
+            if (entries.length === 0) {
+                box.innerHTML = `<p class="text-center text-slate-400 py-10 italic">데이터 대기 중...</p>`;
+                return;
+            }
+
+            const maxVal = Math.max(...entries.map(e => e[1]), 1);
+            box.innerHTML = entries.map(([m, v]) => `
+                <div>
+                    <div class="flex justify-between text-sm font-bold mb-1">
+                        <span class="text-slate-700">${m}</span>
+                        <span class="text-indigo-600">${v}회</span>
+                    </div>
+                    <div class="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                        <div class="h-full bg-indigo-500 transition-all duration-700" style="width:${(v / maxVal) * 100}%"></div>
+                    </div>
+                </div>
+            `).join("");
+        }
+
+        function drawSubjectRank() {
+            const sum = {
+                "데이터베이스": 0,
+                "운영체제": 0,
+                "네트워크": 0,
+                "컴퓨터구조": 0,
+                "소프트웨어공학": 0,
+                "정보보안": 0,
+                "기타": 0
+            };
+
+            for (let d in DB) {
+                const cats = DB[d]?.categories || {};
+                for (let c in sum) sum[c] += (cats[c] || 0);
+            }
+
+            const entries = Object.entries(sum).sort((a, b) => b[1] - a[1]);
+            const box = document.getElementById("subjectRank");
+            if (!box) return;
+
+            const totalAll = entries.reduce((acc, [, v]) => acc + v, 0);
+            if (totalAll === 0) {
+                box.innerHTML = `<p class="text-center text-slate-400 py-10 italic">데이터 대기 중...</p>`;
+                return;
+            }
+
+            box.innerHTML = entries.map(([c, v], i) => `
+                <div class="flex items-center justify-between">
+                    <span class="text-sm font-bold text-slate-700">${i + 1}. ${c}</span>
+                    <span class="text-sm font-bold text-indigo-600">${v}회</span>
+                </div>
+            `).join("");
+        }
+
+        function downloadCSV() {
+            const rows = [["date", "goal", "query", "category", "count"]];
+            const dates = Object.keys(DB).sort();
+            for (const d of dates) {
+                const day = DB[d];
+                // category counts
+                for (const [cat, count] of Object.entries(day.categories || {})) {
+                    rows.push([d, day.goal ?? "", "", cat, count]);
+                }
+                // queries (one per row)
+                for (const q of (day.queries || [])) {
+                    rows.push([d, day.goal ?? "", q, "", ""]);
+                }
+            }
+            const csv = rows.map(r => r.map(x => `"${String(x ?? "").replace(/"/g, '""')}"`).join(",")).join("\n");
+            const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+            const a = document.createElement("a");
+            a.href = URL.createObjectURL(blob);
+            a.download = "study_log.csv";
+            a.click();
+        }
+
+        chatForm.onsubmit = handleSend;
+        window.onload = () => { 
+            initSidebar(); 
+            updateReportUI();
+            addMessage('assistant', "반갑습니다, 영재님! **9급 전산직/데이터직** 합격을 위한 맞춤형 튜터링을 시작합니다. 궁금한 개념을 물어보거나 기출문제 이미지를 업로드해주세요."); 
+            lucide.createIcons(); 
+        };
+    </script>
+</body>
+</html>
